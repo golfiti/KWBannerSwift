@@ -16,7 +16,8 @@ class ViewController: UIViewController, KWBannerViewDelegate{
         super.viewDidLoad()
         
         bannerView.delegate = self;
-        bannerView.nameOfBannerImages = ["image2","image1","image2","image1"]
+        bannerView.imagesName = ["image2","image1","image2","image1"]
+        bannerView.isAutoScroll = true
         bannerView.drawBanner()
     }
     
@@ -27,7 +28,7 @@ class ViewController: UIViewController, KWBannerViewDelegate{
     
     func didTapBannerAtIndex(bannerIndex:CGFloat) {
         print("Tap Banner at Index \(bannerIndex)")
-        bannerView.nameOfBannerImages = ["image1","image1","image1","image1"]
+        bannerView.imagesName = ["image1","image1","image1","image1"]
         bannerView.isAutoScroll = true
         bannerView.drawBanner()
     }

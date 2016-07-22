@@ -8,59 +8,72 @@
 
 import UIKit
 
-@objc protocol KWBannerViewDelegate:class {
+@objc public protocol KWBannerViewDelegate:class {
     optional func didTapBannerAtIndex(bannerIndex:CGFloat)
 }
 
-class KWBannerView: UIView {
-    
-    var scrollView = UIScrollView()
-    
-    // Image
-    var imageCount:CGFloat = 0
-
-    // Array of Images Name
-    var nameOfBannerImages:[String]?
-    
-    var isAutoScroll:Bool = false
+public class KWBannerView: UIView,UIScrollViewDelegate{
     
     var delegate:KWBannerViewDelegate?
+
+    /* Set banner image via UIImage or imageName */
+    public var imagesName:[String]? {
+        didSet{
+            prepareImagesName()
+        }
+    }
     
-    
-    // MARK:Init
-    required init?(coder aDecoder: NSCoder) {
-        super.init(coder: aDecoder)
+    public var imagesObject:[UIImage]? {
+        didSet{
+            prepareImagesObject()
+        }
     }
 
-    func resetData(){
+    /* Automatic scroll banner */
+    public var isAutoScroll:Bool = false
+
+    /* ---------------------------------------------------- */
     
-        imageCount = 0
-        
-        NSTimer().invalidate()
-        
-        if let scrollViewWithTag = self.scrollView.viewWithTag(9){
-            scrollViewWithTag.removeFromSuperview()
-        }
+    var scrollView = UIScrollView()
+    var imageCount:CGFloat = 0
+    var imagesAll:[UIImage] = []
+    var autoScrollTimer = NSTimer()
+    
+    // MARK:Init
+    public required init?(coder aDecoder: NSCoder) {
+        super.init(coder: aDecoder)
     }
     
     // MARK:Setup
-    func drawBanner() {
+    public func drawBanner() {
         
         resetData()
         
-        // Seup
         setupBannerImages()
         
         if (isAutoScroll) {
-            NSTimer.scheduledTimerWithTimeInterval(3,target: self,
-                                                   selector:#selector(autoScrollBanner),
-                                                   userInfo: nil,repeats: true)
+            autoScrollTimer = NSTimer.scheduledTimerWithTimeInterval(3,target:self,
+                                                                     selector:#selector(self.autoScrollBanner),
+                                                                     userInfo:nil,repeats:true)
         }
     }
     
-    func setupBannerImages(){
+    private func prepareImagesObject(){
+        for imageObject in imagesObject! {
+            imagesAll.append(imageObject)
+        }
+    }
+    private func prepareImagesName(){
+        for imageName in imagesName! {
+            if let imageTemp = UIImage(named:imageName) {
+                imagesAll.append(imageTemp)
+            }
+        }
+    }
+    
+    private func setupBannerImages(){
         
-        if (nameOfBannerImages == nil) {
+        if imagesAll.count == 0 {
             return
         }
         
@@ -68,14 +81,11 @@ class KWBannerView: UIView {
         let scrollViewWidth:CGFloat = self.scrollView.frame.width
         let scrollViewHeight:CGFloat = self.scrollView.frame.height
         
-        for imageName in nameOfBannerImages! {
+        for imageName in imagesAll {
             let banner = UIImageView(frame: CGRectMake(scrollViewWidth * imageCount,0,scrollViewWidth, scrollViewHeight))
-            
-            if let imageTempt = UIImage(named:imageName) {
-                banner.image = imageTempt
-                self.scrollView.addSubview(banner)
-                imageCount = imageCount+1
-            }
+            banner.image = imageName
+            self.scrollView.addSubview(banner)
+            imageCount = imageCount+1
         }
         
         self.scrollView.contentSize = CGSizeMake(self.scrollView.frame.width * imageCount,
@@ -84,15 +94,18 @@ class KWBannerView: UIView {
         self.scrollView.showsHorizontalScrollIndicator = false
         self.scrollView.showsVerticalScrollIndicator = false
         self.scrollView.tag = 9
-        self.addSubview(self.scrollView);
+        self.scrollView.delegate = self
+        
         let tapRecognizer = UITapGestureRecognizer(target: self,
-                                                action:#selector(didTapBannerAtIndex))
+                                                   action:#selector(didTapBannerAtIndex))
         self.scrollView.addGestureRecognizer(tapRecognizer)
+        
+        self.addSubview(self.scrollView);
     }
     
     
     // MARK: Tap Banner Delgate
-    func didTapBannerAtIndex() {
+    public func didTapBannerAtIndex() {
         let pageWidth:CGFloat = CGRectGetWidth(scrollView.frame)
         let currentPage = floor((scrollView.contentOffset.x-pageWidth/2)/pageWidth)+1
         self.delegate?.didTapBannerAtIndex?(currentPage)
@@ -100,7 +113,7 @@ class KWBannerView: UIView {
     
     
     // MARK: AutoScroll
-    @objc private func autoScrollBanner(){
+    func autoScrollBanner(){
 
         let pageWidth:CGFloat = CGRectGetWidth(self.scrollView.frame)
         let maxWidth:CGFloat = pageWidth * imageCount
@@ -111,6 +124,26 @@ class KWBannerView: UIView {
         if contentOffset + pageWidth == maxWidth {
             slideToX = 0
         }
-        self.scrollView.scrollRectToVisible(CGRectMake(slideToX, 0, pageWidth, CGRectGetHeight(self.scrollView.frame)), animated: true)
+        self.scrollView.scrollRectToVisible(CGRectMake(slideToX, 0, pageWidth,CGRectGetHeight(self.scrollView.frame)), animated:true)
     }
+    
+    public func scrollViewWillBeginDragging(scrollView: UIScrollView) {
+        if (isAutoScroll) {
+            autoScrollTimer.invalidate()
+            autoScrollTimer = NSTimer.scheduledTimerWithTimeInterval(3,target:self,
+                                                                     selector:#selector(self.autoScrollBanner),
+                                                                     userInfo:nil,repeats:true)
+        }
+    }
+
+    private func resetData(){
+        
+        imageCount = 0
+        autoScrollTimer.invalidate()
+        
+        if let scrollViewWithTag = self.scrollView.viewWithTag(9){
+            scrollViewWithTag.removeFromSuperview()
+        }
+    }
+    
 }
